@@ -6,9 +6,6 @@ const crypto = require('crypto');
 const cluster = require('cluster');
 const os = require('os');
 
-/*
-    这是一个基于1.2的修改版，中间件模式准备使用Promise设计成链式调用的过程。
-*/
 var ant = function(){
     this.config = {
         //此配置表示POST提交表单的最大字节数，也是上传文件的最大限制，
@@ -33,7 +30,7 @@ var ant = function(){
         //默认上传路径，自动上传函数会使用
         upload_path     : './upload',
 
-        //是否根据上传名称自动创建目录，默认为true表示开启
+        //是否根据上传名称自动创建目录，默认为true表示开启，此功能暂时不支持
         upload_name_dir : true,
 
     };
@@ -105,15 +102,24 @@ var ant = function(){
 
     /*
         中间件模式采用Promise链式设计，当一个中间件被调用以后会返回一个Promise对象，
-        then方法接收的是req和res，在中间件函数中，如果处理失败则要抛出错误，此时链式最后
-        的catch函数捕获并结束调用。
+        then方法接收的是req和res以及一个表示下层中间件的next,在中间件函数中，如果
+        处理失败则要抛出错误，此时链式最后的catch函数捕获并结束调用。
         中间件的编写一定要是这样的形式：
-        function(rr) {
+        function(req, res, next) {
             return new Promise((resolve, reject) => {
-                //something code 
+                //something code
+                resolve({
+                    req : req,
+                    res : res,
+                    next: next
+                }); 
             })
-            .then(() => {
-
+            .then((rr) => {
+                //code
+                return rr.next.method(
+                    rr.req,
+                    rr.res,
+                    rr.next.next);
             });
         }
         rr是一个对象{req : request, res : response};
@@ -123,18 +129,50 @@ var ant = function(){
 
     /*
         mid  : 中间件函数
-        fail : 中间件运行失败以后的回调函数
         preg : 正则匹配，匹配成功的路径才会执行
         name : 中间件名称
     */
-    this.addmiddle = function(mid, fail, preg = /.*/, name='') {
+    this.addmiddle = function(mid, preg = /.*/) {
         if (typeof mid === 'function') {
+            var last = this.middleware.length - 1;
+            var real_mid = function(req, res, next) {
+                var self_preg = preg;
+                
+                if (typeof self_preg === 'string') {
+                    if (!(self_preg == req.pathinfo)) {
+                        return next.method(req, res, next.next);
+                    }
+                } else if (self_preg instanceof RegExp) {
+                    if (! self_preg.test(req.pathinfo)) {
+                        return next.method(req, res, next.next);
+                    }
+                } else if (self_preg instanceof Array) {
+                    if (self_preg.indexOf(req.pathinfo) < 0) {
+                        return next.method(req, res, next.next);
+                    }
+                }
+                
+                return mid(req, res, next);
+            };
+
             this.middleware.push({
-                method : mid,
-                fail   : fail,
+                method : real_mid,
                 preg   : preg,
-                name   : name
+                next   : {
+                    method : function(req, res, next) {
+                        return {
+                            req : req,
+                            res : res,
+                            next: next
+                        };
+
+                    },
+                    next : null
+                }
             });
+            if (last >= 0) {
+                this.middleware[last].next = this.middleware[this.middleware.length-1];
+            }
         }
     };
 
@@ -145,7 +183,6 @@ var ant = function(){
         并且middleware是否符合规则：
         {
             mid   : function(req, res){...},
-            fail  : function(req, res, mid) {...},
             preg  : [] OR String OR regex,
             name  : NAME_STRING
         }
@@ -153,80 +190,60 @@ var ant = function(){
     this.usemiddle = function(mid) {
         if (typeof mid.middleware === 'object') {
             if (typeof mid.middleware.mid === 'function') {
-                var fail = null;
                 var preg = '';
-                var name = '';
-
                 if (typeof mid.middleware.preg !== undefined) {
                     preg = mid.middleware.preg;
                 }
 
-                if (typeof mid.middleware.fail !== undefined) {
-                    fail = mid.middleware.fail;
-                }
-
-                if (typeof mid.middleware.name === 'string') {
-                    name = mid.middleware.name;
-                }
-
-                this.addmiddle(mid.middleware.mid, fail, preg, name);
+                this.addmiddle(mid.middleware.mid, preg);
             }
         }
     };
 
-    this.runMiddleware = function(path, req, res, route_key=null, args=null) {
-        if (this.middleware.length == 0) {
-            return true;
-        }
-
-        var pchain = new Promise(function(resolve, reject){
+    this.runMiddleware = function(req, res, route_key=null, args=null) {
+        req.route_key = route_key;
+        req.request_args = args;
+        var start_chain = new Promise(function(resolve, reject) {
             resolve({
                 req : req,
-                res : res
+                res : res,
             });
-        });
-        var chain = pchain;
-
-        for (var i=0; i < this.middleware.length; i++) {
-            if (typeof this.middleware[i].method === 'function') {
-                if (typeof this.middleware[i].preg === 'string') {
-                    if (!(this.middleware[i].preg == req.pathinfo)) {
-                        continue;
-                    }
-                }else if (this.middleware[i].preg instanceof RegExp) {
-                    if (! this.middleware[i].preg.test(req.pathinfo)) {
-                        continue;
-                    }
-                } else if (this.middleware[i].preg instanceof Array) {
-                    if (this.middleware[i].preg.indexOf(req.pathinfo) < 0) {
-                        continue;
-                    }
-                }
-                var middw = this.middleware[i];
-                chain = chain.then((rr) => {
-                    return middw.method(rr.req, rr.res).then((data) => {
-                        if (data.status === false) {
-                            throw data;
-                        }
-
-                        return {
-                            req : data.req,
-                            res : data.res
-                        };
-                    });
-                });
-
-            }
-        }
-        
-        chain.catch((e) => {
-            if (typeof e.mid !== undefined && typeof e.mid.fail === 'function') {
-                e.mid.fail(e.req, e.res);
-            } else {
+        }).then((rr) => {
+            if (ant.middleware.length > 0) {
+                var mchain = ant.middleware[0].method(
+                    rr.req,
+                    rr.res,
+                    ant.middleware[0].next
+                );
                 
+                return mchain;
+            } else {
+                return rr;
+            }
+        }).then(rr => {
+            if (args !== null) {
+                ant.api_table[route_key].callback(rr.req, rr.res, args);
+            } else {
+                ant.api_table[route_key].callback(rr.req, rr.res);
+            }
+        }).catch(err => {
+            if (typeof err === 'string') {
+                res.send(err);
+            } else if (typeof err === 'object') {
+                if (err.fail !== undefined && typeof err.fail === 'function') {
+                    err.fail(err);
+                } else if (err.errinfo !== undefined) {
+                    res.send(err.errinfo);
+                } else {
+                    res.send(JSON.stringify(err));
+                }
+            } else if (typeof err === 'function') {
+                err();
+            } else {
+                res.send(JSON.stringify(err));
             }
         });
-        return true;
+
     };
 
     /*
@@ -291,19 +308,23 @@ var ant = function(){
     this.execreq = function (path, req, res) {
         var pk = null;
         var route_key = null;
-        /* if (this.config.static_on) {
-            return this.staticReq(path, req, res);
-        } else {
-            res.statusCode = 404;
-            res.end("request not found");
-            return ;
-        } */
+        req.user_real_path = path;
+        /*  */
         if (this.api_table[path] === undefined) {
             pk = this.findPath(path);
             if (pk !== null) {
                 route_key = pk.key;
+            } else if (this.config.static_on) {
+                return this.staticReq(path, req, res);
+            } else {
+                res.statusCode = 404;
+                res.end("request not found");
+                return ;
             }
+        } else {
+            route_key = path;
         }
+
         if (route_key !== null) {
             var R = this.api_table[route_key];
 
@@ -318,28 +339,7 @@ var ant = function(){
             }
         }
 
-        this.runMiddleware(path, req, res, route_key, pk);
-
-        //middleware filter
-        var mw = this.runMiddleware(req, res);
-        if (mw !== true) {
-            if(typeof mw.middle.fail  === 'function') {
-                mw.middle.fail(req, res, mw.middle);
-                return ;
-            } else {
-                res.statusCode = 403;
-                res.end('');
-                return ;
-            }
-        }
-
-        
-
-        if (pk === null) {
-            R.callback(req, res);
-        } else {
-            R.callback(req, res, pk.args);
-        }
+        this.runMiddleware(req, res, route_key, pk===null?pk:pk.args);
     };
 
     /* upload single file, not in ranges */
@@ -385,6 +385,8 @@ var ant = function(){
         last_index = data.search("\r\n\r\n");
 
         var header_data = data.substring(0, last_index);
+        header_data = Buffer.from(header_data, 'binary').toString('utf8');
+
         file_start = last_index + 4;
 
         var file_data = data.substring(file_start, data.length-2);
@@ -400,7 +402,7 @@ var ant = function(){
                 if (tmp.search("name=") > -1) {
                     var name = tmp.split("=")[1].trim();
                     name = name.substring(0, name.length-1);
-                    req.post_data[name] = file_data;
+                    req.POST[name] = file_data;
                     break;
                 }
             }
@@ -424,6 +426,11 @@ var ant = function(){
                     name = tmp_name[i].split("=")[1].trim();
                     name = name.substring(1, name.length-1);
                 }
+            }
+
+            if (name == '') {
+                file_data = '';
+                return ;
             }
 
             file_post['content-type'] = form_list[1].split(":")[1].trim();
@@ -483,26 +490,6 @@ var ant = function(){
         });
     };
 
-    this.autoUpload = function(req, res, callback) {
-        /* if (req.upload_files === undefined) {
-            return null;
-        }
-
-        var ok_list = [];
-        var err_list = [];
-
-        for(var k in req.upload_files) {
-            for(var i=0; i < req.upload_files[k].length; i++) {
-                this.moveUploadFile(req.upload_files[k][i]).then(function(val){
-                    ok_list.push(val);
-                }, function(err){
-                    err_list.push(err);
-                });
-            }
-        } */
-
-    };
-
     /*
         multipart/form-data
         multipart/byteranges
@@ -515,6 +502,12 @@ var ant = function(){
         return false;
     };
 
+    /*
+        解析请求并解析数据，请求的路径会放在req.pathinfo中，GET提交的数据在req.GET获取，
+        POST提交的数据在req.POST获取，req.upload_data暂存POST上传的数据，解析后会
+        放在req.upload_files中，按照上传的消息头name属性名称进行分组，文件作为列表存储，
+        因为多个文件扩展消息头name的值可以相同。
+    */
     this.run = function(host='localhost', port = 8008) {
 
         if (this.config.post_max_size < 1024) {
@@ -539,7 +532,7 @@ var ant = function(){
             var out_limit = false;
             var get_params = url.parse(req.url,true);
             
-            req.query_params = get_params.query;
+            req.GET = get_params.query;
             req.pathinfo = get_params.pathname;
 
             if (get_params.pathname == '') {
@@ -572,11 +565,11 @@ var ant = function(){
                     }
                     
                     if (! is_upload) {
-                        req.post_data = qs.parse(body_data);
+                        req.POST = qs.parse(body_data);
                         req.is_upload = false;
                     } else {
                         req.is_upload = true;
-                        req.post_data = {};
+                        req.POST = {};
                         req.upload_data = body_data;
                     }
 
@@ -632,8 +625,7 @@ var ant = function(){
         parseSingleFile   : this.parseSingleFile,
         parseUploadData   : this.parseUploadData,
         checkUploadHeader : this.checkUploadHeader,
-        moveUploadFile    : this.moveUploadFile,
-        autoUpload        : this.autoUpload
+        moveUploadFile    : this.moveUploadFile
     };
 
 }();
