@@ -1,10 +1,12 @@
 const ant = require('./ant1.3.js');
-const antsess = require('./ant-session.js');
+const antsess = require('./ant_sess_middleware.js');
 const fs = require('fs');
 
 ant.config.static_path = './static';
 ant.config.static_on = true;
-ant.upload_path = 'upload';
+ant.config.upload_path = `${ant.config.static_path}/upload`;
+
+ant.usemiddle(antsess);
 
 ant.addmiddle(function(req, res, next) {
     var m1 = new Promise((rv, rj) => {
@@ -123,6 +125,17 @@ ant.get('/header', function(req, res){
 
 ant.get('/upage', function(req, res) {
     fs.readFile('view/upload.html', (err, data) => {
+        if (err) {
+            res.statusCode = 404;
+            res.send('Not found');
+        } else {
+            res.send(data.toString('utf8'));
+        }
+    });
+});
+
+ant.get('/test', function(req, res) {
+    fs.readFile('view/index.html', (err, data) => {
         if (err) {
             res.statusCode = 404;
             res.send('Not found');

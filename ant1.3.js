@@ -182,20 +182,21 @@ var ant = function(){
         规则提供一个middleware属性，此函数会自动检测是否具备middleware属性，
         并且middleware是否符合规则：
         {
-            mid   : function(req, res){...},
-            preg  : [] OR String OR regex,
-            name  : NAME_STRING
+            method : function(req, res){...},
+            preg   : [] OR String OR regex,
         }
     */
     this.usemiddle = function(mid) {
-        if (typeof mid.middleware === 'object') {
-            if (typeof mid.middleware.mid === 'function') {
+        if (mid.middleware !==undefined && typeof mid.middleware === 'object') {
+            if (mid.middleware.method !== undefined &&
+                typeof mid.middleware.method === 'function'
+            ) {
                 var preg = '';
                 if (typeof mid.middleware.preg !== undefined) {
                     preg = mid.middleware.preg;
                 }
 
-                this.addmiddle(mid.middleware.mid, preg);
+                this.addmiddle(mid.middleware.method, preg);
             }
         }
     };
@@ -239,8 +240,10 @@ var ant = function(){
                 }
             } else if (typeof err === 'function') {
                 err();
-            } else {
+            } else if (err !== undefined && err !== null) {
                 res.send(JSON.stringify(err));
+            } else {
+                res.send('Unknow error');
             }
         });
 
@@ -577,7 +580,7 @@ var ant = function(){
                 });
             } else {
                 res.statusCode = 405;
-                res.setHeader('Allow', 'GET,POST');
+                res.setHeader('Allow', ['GET','POST']);
                 res.end('Method not allowed');
             }
 
