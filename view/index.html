@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload</title>
+    <link rel="stylesheet" href="http://127.0.0.1:2019/css/fdxy.min.css" type="text/css">
+    <script src="http://127.0.0.1:2019/js/brutal_1804.js"></script>
+    <script src="http://127.0.0.1:2019/js/raj.js"></script>
+    <style>
+        
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        <div class="grid-x">
+            <div class="cell small-12">
+                <form onsubmit="return false;">
+                    <input type="text" id="test-info">
+                    <input type="submit" class="button small success" onclick="ajax_submit()">
+                </form>
+
+                <p id="ret-info"></p>
+            </div>
+        </div>
+    </div> 
+    <script>
+        function ajax_submit() {
+            var d = {
+                test : brutal.autod('#test-info')
+            };
+
+            raj.post({
+                url : 'http://127.0.0.1:2019/pt',
+                data : brutal.jsontodata(d),
+                retformat : 'text',
+                success : function(xr) {
+                    brutal.autod('#ret-info', xr);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

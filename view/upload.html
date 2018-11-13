@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload</title>
+    <link rel="stylesheet" href="https://127.0.0.1:2020/css/fdxy.min.css" type="text/css">
+    <script src="https://127.0.0.1:2020/js/brutal_1804.js"></script>
+    <script src="https://127.0.0.1:2020/js/raj.js"></script>
+    <style>
+        
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        <div class="grid-x">
+            <div class="cell small-12">
+                <form onsubmit="return false;">
+                    <label for="exampleFileUpload" class="button">Upload File</label>
+                    <input type="file" id="exampleFileUpload" class="show-for-sr" onchange="ajax_upload(this)">
+                    <input type="submit" class="button">
+                </form>
+
+                <!-- <form action="http://127.0.0.1:2019/upload" method="post" enctype ="multipart/form-data">
+                    <input type="text" name="description" value="">
+                    <label for="FileUpload" class="button">Upload File</label>
+                    <input type="file" id="FileUpload" class="show-for-sr" name="file">
+                    <input type="submit" class="button" value="Upload">
+                </form> -->
+
+                <p id="ret-info"></p>
+            </div>
+        </div>
+    </div> 
+    <script>
+        function ajax_upload(file){
+            raj.upload(file, {
+                url : 'https://127.0.0.1:2020/upload',
+                upload_name : 'file',
+                //retformat : 'text',
+                success:function(xr) {
+                    brutal.autod('#ret-info', `
+                        <img src="/upload/${xr.filename}">
+                    `);
+                },
+                error : function(err) {
+                    brutal.autod('#ret-info',`${err.status} : ${err.errinfo}`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
