@@ -36,11 +36,11 @@
         function ajax_upload(file){
             raj.upload(file, {
                 url : 'https://127.0.0.1:2020/upload',
-                upload_name : 'file',
+                upload_name : 'image',
                 //retformat : 'text',
                 success:function(xr) {
                     brutal.autod('#ret-info', `
-                        <img src="/upload/${xr.filename}">
+                        <img src="/upload/${xr.upload_name}/${xr.filename}">
                     `);
                 },
                 error : function(err) {

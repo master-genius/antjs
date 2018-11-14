@@ -1,4 +1,4 @@
-const ant = require('./ant1.5.js');
+const ant = require('./ant1.6.js');
 const antsess = require('./ant_sess_middleware.js');
 const fs = require('fs');
 
@@ -64,23 +64,24 @@ ant.get('/', function(req, res) {
 ant.post('/upload', function(req, res){
     var up_after = null;
     if (req.upload_files['image'] !== undefined) {
-        up_after = ant.moveUploadFile(req.upload_files['image'][0]);
+        up_after = ant.moveUploadFile(req.upload_files['image'], 0, 'image');
     } else if (req.upload_files['file'] !== undefined) {
-        up_after = ant.moveUploadFile(req.upload_files['file'][0]);
+        up_after = ant.moveUploadFile(req.upload_files['file'], 0, 'file');
     } else {
         res.send('Please named your file');
     }
 
     req.upload_files = undefined;
 
-    if (up_after !== null) {
-        up_after.then(function(val){
-            res.send(val);
-        }, function(err){
-            res.send(err);
-        });
+    if (up_after === false) {
+        res.send('Error: file not found');
     }
-    
+
+    if (up_after.message !== undefined) {
+        res.send(up_after.message);
+    }
+
+    res.send(up_after);
 });
 
 ant.post('/pt', function(req, res){
