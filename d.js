@@ -1,5 +1,6 @@
 const ant = require('./ant1.6.js');
 const antsess = require('./ant_sess_middleware.js');
+const antupfilter = require('./ant_upload_middleware.js');
 const fs = require('fs');
 
 ant.config.static_path = './static';
@@ -12,8 +13,13 @@ ant.config.https_options = {
     cert : './rsa/cert.crt'
 };
 
-ant.usemiddle(antsess);
+antsess.config.expires = 3600;
 
+antupfilter.middleware.preg = ['/upload'];
+
+ant.usemiddle(antsess);
+ant.usemiddle(antupfilter);
+/*
 ant.addmiddle(function(req, res, next){
     var mime_type = [
         'audio/mpeg',
@@ -54,6 +60,7 @@ ant.addmiddle(function(req, res, next){
         };
     });
 }, ['/upload']);
+*/
 
 
 ant.get('/', function(req, res) {

@@ -1,30 +1,11 @@
-const ant = require('./ant1.2.js');
-const antsess = require('./ant-session.js');
+const ant = require('./ant1.6.js');
 
 
 ant.config.static_path = './static';
 ant.config.static_on = true;
 ant.upload_path = 'upload';
 
-/* ant.addmiddle(function(req, res){
-    res.write("hello\n");
 
-    return res;
-}, function(req, res, mid) {
-    console.log(mid);
-    res.send(`failed : ${mid.name}`);
-}, ['/pt', '/'], 'test');
-
-ant.addmiddle(function(req, res){
-    res.write("world\n");
-
-    return res;
-}, function(req, res, mid) {
-    console.log(mid);
-    res.send(`failed : ${mid.name}`);
-}, ['/pt', '/'], 'test2'); */
-
-ant.usemiddle(antsess);
 
 ant.get('/', function(req, res) {
     console.log('user-data', req.user);
@@ -66,3 +47,4 @@ ant.get('/content/:id', (req, res, args) => {
 });
 
 ant.run('127.0.0.1', 2018);
+

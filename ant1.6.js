@@ -366,7 +366,7 @@ var ant = function(){
                 this.parseUploadData(req, res);
             }
         }
-
+        
         this.runMiddleware(req, res, route_key, pk===null?pk:pk.args);
     };
 
@@ -600,6 +600,9 @@ var ant = function(){
             req.GET = get_params.query;
             req.pathinfo = get_params.pathname;
 
+            req.POST = {};
+            req.upload_files = {};
+
             if (get_params.pathname == '') {
                 get_params.pathname = '/';
             }
@@ -632,7 +635,7 @@ var ant = function(){
                         req.is_upload = false;
                     } else {
                         req.is_upload = true;
-                        req.POST = {};
+                        //req.POST = {};
                         req.upload_data = body_data;
                     }
 
@@ -660,7 +663,7 @@ var ant = function(){
                 process.exit(-1);
             }
         } else {
-            serv = http.createServer();
+            serv = http.createServer(handler);
         }
 
         serv.on('clientError', (err, sock) => {

@@ -20,6 +20,10 @@ var antsess = function(){
         pre             : 'antsess_',
         cookie_name     : 'ANTSESSIONID',
         path            : '/tmp',
+
+        expires         : 0,
+        domain          : '',
+        cookie_path     : '',
     };
 
     this.sess_data = {
@@ -59,10 +63,26 @@ var antsess = function(){
                 var sess_cookie = [
                     `${antsess.config.cookie_name}=${sess_id}`,
                     //`Domain=127.0.0.1:2018`,
-                    `Path=/`,
+                    //`Path=/`,
                     //`Expires=`
-                    'HttpOnly'
                 ];
+
+                if (this.config.expires > 0 && this.config.expires < 2592000) {
+                    var t = new Date(Date.now() + this.config.expires *1000);
+                    sess_cookie.push(`Expires=${t.toString()}`);
+                }
+
+                if (this.config.domain !== '') {
+                    sess_cookie.push(`Domain=${this.config.domain}`);
+                }
+
+                if (this.config.cookie_path !== '') {
+                    sess_cookie.push(`Path=${this.config.cookie_path}`);
+                } else {
+                    sess_cookie.push('Path=/');
+                }
+
+                sess_cookie.push('HttpOnly');
 
                 req.user = antsess.user_data;
                 antsess.sess_data.sess_id = sess_id;
@@ -187,3 +207,4 @@ var antsess = function(){
 }();
 
 module.exports = antsess;
+
