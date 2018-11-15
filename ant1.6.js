@@ -373,7 +373,7 @@ var ant = function(){
     /* upload single file, not in ranges */
     this.parseUploadData = function(req, res) {
         var bdy = req.headers['content-type'].split('=')[1];
-        bdy = bdy.trim(' ');
+        bdy = bdy.trim();
         bdy = `--${bdy}`;
         end_bdy = bdy + '--';
 
@@ -414,12 +414,12 @@ var ant = function(){
 
         var header_data = data.substring(0, last_index);
         header_data = Buffer.from(header_data, 'binary').toString('utf8');
-
+        
         file_start = last_index + 4;
 
         var file_data = data.substring(file_start, data.length-2);
         data = '';
-        
+       //console.log(file_data); 
         //parse header
         if (header_data.search("Content-Type") < 0) {
             //post form data, not file data
@@ -436,8 +436,8 @@ var ant = function(){
             }
         } else {
             //file data
-            var form_list = header_data.split("\r\n");
-            
+            var form_list = header_data.split("\r\n").filter(s => s.length > 0);
+//           console.log(form_list);
             var tmp_name = form_list[0].split(";");
             var file_post = {
                 filename        : '',

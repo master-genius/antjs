@@ -7,7 +7,7 @@ ant.config.static_path = './static';
 ant.config.static_on = true;
 ant.config.upload_path = `${ant.config.static_path}/upload`;
 //ant.config.daemon = true;
-ant.config.https_on = true;
+//ant.config.https_on = true;
 ant.config.https_options = {
     key  : './rsa/rsa_private.key',
     cert : './rsa/cert.crt'
