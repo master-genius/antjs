@@ -4,8 +4,11 @@ const crypto = require('crypto');
 const fs = require('fs');
 const urlparse = require('url');
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 var hq = function() {
+    
+
     this.config = {
         
         protocol    : 'https',
@@ -16,6 +19,18 @@ var hq = function() {
 
     this.headers = {
     
+    };
+
+    this.mime_map = {
+        'css'   : 'text/css',
+        'der'   : 'application/x-x509-ca-cert',
+        'gif'   : 'image/gif',
+        'gz'    : 'application/x-gzip',
+        'h'     : 'text/plain',
+        'htm'   : 'text/html',
+        'html'  : 'text/html',
+
+
     };
 
     this.args   = {
@@ -36,9 +51,11 @@ var hq = function() {
         }
     */
     this.upload = function(url, f, callback) {
-        var h = (this.config.protocol === 'https') ? https : http;
+        //var h = (this.config.protocol === 'https') ? https : http;
 
         var u = new urlparse.URL(url);
+
+        var h = (url.protocol === 'https') ? https : http ;
 
         var opts = {
             host        : u.host,
@@ -46,6 +63,8 @@ var hq = function() {
             port        : u.port,
             path        : u.pathname,
             method      : 'POST',
+            requestCert : false,
+            rejectUnauthorized : false,
             headers     : {
                 'Content-Type'  : 'multipart/form-data; ',
             }
@@ -77,13 +96,13 @@ var hq = function() {
             }
 
         }).then((r) => {
-            var header_data = `Content-Disposition: form-data; name=${'"'}${r.name}${'"'}; filename=${'"'}${r.filename}${'"'}\r\nContent-Type: image/jpeg`;
+            var mime_type = '';
+            var header_data = `Content-Disposition: form-data; name=${'"'}${r.name}${'"'}; filename=${'"'}${r.filename}${'"'}\r\nContent-Type: ${mime_type}`;
             //header_data = Buffer.from(header_data, 'utf8').toString('binary');
             console.log(header_data);
             var bdy = hq.boundary();
             var payload = `\r\n--${bdy}\r\n${header_data}\r\n\r\n`;
             var end_data = `\r\n--${bdy}--\r\n`;
-            //var post_data = `--${bdy}\r\n${header_data}${r.data}\r\n--${bdy}--\r\n`;
             r.options.headers['Content-Type'] += `boundary=${bdy}`;
             var http_request = r.httpr.request(r.options, (res) => {
                 var ret_data = '';

@@ -537,6 +537,37 @@ var ant = function(){
         } catch (err) {
             return err;
         }
+
+        /*
+        return new Promise(function(resolve, reject) {
+            fs.writeFile(target_file, buffer_data, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({
+                        status   : 0,
+                        pathname : target_file,
+                        filename : file_name
+                    });
+                }
+            });
+        });
+        */
+    };
+
+    this.mvupfile = function(opts, callback) {
+
+        return new Promise((rv, rj) => {
+            if (files.length <= 0) {
+                ;
+            } else if (files.length <= file_index) {
+                file_index = files.length - 1;
+            } else if (file_index < 0) {
+                file_index = 0;
+            }
+        }).then(() => {
+        
+        });
     };
 
     /*

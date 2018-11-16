@@ -1,8 +1,10 @@
 const h = require('./hq.js');
 
-var url = 'http://127.0.0.1:2020/upload';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-h.config.protocol = 'http';
+var url = 'https://127.0.0.1:2020/upload';
+
+h.config.protocol = 'https';
 
 h.upload(
     url,
