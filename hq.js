@@ -9,11 +9,8 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 var hq = function() {
     
-
     this.config = {
         
-        //protocol    : 'https',
-
         //请求结束自动清理options和headers
         autoreset   : false,
     };
@@ -63,7 +60,7 @@ var hq = function() {
     this.mimeType = function(filename) {
         var extname = this.extName(filename);
         if (extname !== '' && this.mime_map[extname] !== undefined) {
-            return this.mime_type[extname];
+            return this.mime_map[extname];
         }
         return this.default_mime;
     };
@@ -93,13 +90,53 @@ var hq = function() {
         return opts;
     };
 
-    this.get = function() {
+    this.get = function(url, callback) {
+        var opts = this.parseUrl(url);
+        opts.method = 'GET';
+        
+        var h = (opts.protocol === 'https:') ? https : http;
+        
+        h.get(url, (res) => {
+
+            let error = null;
+            if (res.statusCode !== 200) {
+                error = new Error(`request failed, status code:
+                                    ${res.statusCode}`
+                                );
+            }
+
+            if (error) {
+                res.resume();
+                callback(error, null);
+                return ;
+            }
+
+            res.setEncoding('utf8');
+            var get_data = '';
+
+            res.on('data', (data) => {
+                get_data += data.toString();
+            });
+
+            res.on('end', () => {
+                callback(null, get_data);
+            });
+
+            res.on('error', (err) => {
+                get_data = '';
+                callback(err, null);
+            });
+
+        }).on('error', (err) => {
+            callback(err, null);
+        });
+
     };
 
 
     this.post = function(url, data, callback) {
         var opts = this.parseUrl(url);
-        var h = (opts.protocol === 'https') ? https : http;
+        var h = (opts.protocol === 'https:') ? https : http;
         opts.method = 'POST';
         opts.headers = {
             'Content-Type'  : 'application/x-www-form-urlencoded',
@@ -115,11 +152,13 @@ var hq = function() {
                 res_data += data.toString();
             });
 
-            res.on('end', (err) => {
-                callback(err, null);
+            res.on('end', () => {
+                callback(null, res_data);
             });
 
-            res.on('error', );
+            res.on('error', (err) => {
+                callback(err, null);
+            });
         });
 
         r.on('error', (e) => {
@@ -137,10 +176,8 @@ var hq = function() {
     */
     this.upload = function(url, f, callback) {
         //var h = (this.config.protocol === 'https') ? https : http;
-
         var opts = this.parseUrl(url);
-
-        var h = (opts.protocol === 'https') ? https : http ;
+        var h = (opts.protocol === 'https:') ? https : http ;
 
         opts.method = 'POST';
         opts.headers = {
@@ -156,7 +193,7 @@ var hq = function() {
                     
                     var name_split = f.file.split('/').filter(p => p.length > 0);
                     var filename   = name_split[name_split.length - 1];
-                    var mime_type  = hq.mimeType(filename);
+                    var mime_type  = this.mimeType(filename);
 
                     fs.readFile(f.file, (err, data) => {
                         if (err) {
@@ -181,8 +218,8 @@ var hq = function() {
         }).then((r) => {
             var header_data = `Content-Disposition: form-data; name=${'"'}${r.name}${'"'}; filename=${'"'}${r.filename}${'"'}\r\nContent-Type: ${r.mime_type}`;
             //header_data = Buffer.from(header_data, 'utf8').toString('binary');
-            console.log(header_data);
-            var bdy = hq.boundary();
+            //console.log(header_data);
+            var bdy = this.boundary();
             var payload = `\r\n--${bdy}\r\n${header_data}\r\n\r\n`;
             var end_data = `\r\n--${bdy}--\r\n`;
             r.options.headers['Content-Type'] += `boundary=${bdy}`;
@@ -197,24 +234,26 @@ var hq = function() {
                 });
 
                 res.on('end', () => {
-                    return callback(ret_data);
+                    return callback(null, ret_data);
                 });
             });
 
             http_request.on('error', (err) => {
-                callback(err);
+                callback(err, null);
             });
 
             http_request.write(payload);
 
-            var fstream = fs.createReadStream(r.filename, {bufferSize : 4096});
+            var fstream = fs.createReadStream(r.pathname, {bufferSize : 4096});
             fstream.pipe(http_request, {end :false});
             fstream.on('end', () => {
                 http_request.end(end_data);
             });
             
         }, (err) => {
-            callback(err);
+            callback(err, null);
+        }).catch((err) => {
+            callback(err, null);
         });
         
         /*
