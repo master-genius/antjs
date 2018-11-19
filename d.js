@@ -19,49 +19,6 @@ antupfilter.middleware.preg = ['/upload'];
 
 ant.usemiddle(antsess);
 ant.usemiddle(antupfilter);
-/*
-ant.addmiddle(function(req, res, next){
-    var mime_type = [
-        'audio/mpeg',
-        'video/mp4',
-        'image/jpeg',
-        'image/png'
-    ];
-
-    var mimeTypeFilter = function(mtype) {
-        if (mime_type.indexOf(mtype) < 0) {
-            return false;
-        }
-        return true;
-    };
-
-    return new Promise((rv, rj) => {
-        rv({
-            req : req,
-            res : res,
-            next : next
-        });
-    })
-    .then((rr) => {
-        if (rr.req.upload_files['file'] !== undefined) {
-            var flist = rr.req.upload_files['file'];
-            for(var i=0 ;i<flist.length; i++) {
-                if (mimeTypeFilter(flist[i]['content-type']) === false) {
-                    rr.res.statusCode = 415;
-                    throw `MIME TYPE not be accepted : ${flist[i].filename}`;
-                }
-            }
-        }
-
-        return {
-            req : rr.req,
-            res : rr.res,
-            next : rr.next.next
-        };
-    });
-}, ['/upload']);
-*/
-
 
 ant.get('/', function(req, res) {
     //console.log('user-data', req.user);

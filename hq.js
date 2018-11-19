@@ -3,6 +3,7 @@ const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const urlparse = require('url');
+const qs = require('querystring');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
@@ -104,6 +105,29 @@ var hq = function() {
             'Content-Type'  : 'application/x-www-form-urlencoded',
         };
 
+        post_data = qs.stringify(data);
+
+        var r = h.request(opts, (res) => {
+            var res_data = '';
+
+            res.setEncoding('utf8');
+            res.on('data', (data) => {
+                res_data += data.toString();
+            });
+
+            res.on('end', (err) => {
+                callback(err, null);
+            });
+
+            res.on('error', );
+        });
+
+        r.on('error', (e) => {
+            callback(e, null);
+        });
+
+        r.write(post_data);
+        r.end();
     };
 
     /*
@@ -205,7 +229,7 @@ var hq = function() {
         hash.update(`${Date.now()}-${Math.random()}`);
         var bdy = hash.digest('hex');
 
-        return `---------------${bdy}`;
+        return `----${bdy}`;
     };
 
     return {

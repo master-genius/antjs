@@ -10,6 +10,7 @@ const serv = http2.createSecureServer(options);
 
 serv.on('stream', (stream, headers) => {
     console.log(headers);
+    console.log(stream);
 
     stream.respond({
         'content-type' : 'text/html',
@@ -19,5 +20,5 @@ serv.on('stream', (stream, headers) => {
     stream.end('<h3>Hello world</h3>');
 });
 
-serv.listen(2020, '127.0.0.1');
+serv.listen(3456, '127.0.0.1');
 
