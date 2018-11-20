@@ -8,11 +8,11 @@ var upload_url = `${host}/upload`;
 
 var h = new httpreq();
 
-/*
+
 h.upload(
     upload_url,
     {
-        file : '/home/brave/tmp/he.jpg',
+        file : '/home/brave/tmp/21323.jpg',
         upload_name : 'image',
     },
     (err, data) => {
@@ -23,7 +23,7 @@ h.upload(
         }
     }
 );
-*/
+
 /*
 h.get(`${host}/content/1234`, 
     (err, data) => {

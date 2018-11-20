@@ -540,6 +540,53 @@ var ant = function(){
     };
 
     /*
+        移动上传文件的异步模式，
+        options :
+            files       : 文件列表，比如req.upload_files['image']
+            file_index  : 文件列表索引
+            upload_name : 上传名称，可以和req.upload_files相同，也可以是其他
+            target_file : 指定目标文件路径和名称
+            
+    */
+    this.moveuf = function(options, callback) {
+        if (options.files.length == 0) {
+            callback(new Error('files not found'), null);
+            return ;
+        } else if (files.length <= file_index) {
+            file_index = files.length - 1;
+        } else if (file_index < 0) {
+            file_index = 0;
+        }
+
+        try {
+            var real_path = `${this.config.upload_path}/${upload_name}`;
+            try {
+                fs.accessSync(real_path, fs.constants.F_OK);
+            } catch (err) {
+                try {
+                    fs.mkdirSync(real_path);
+                } catch (err) {
+                    callback(err, null);
+                    return ;
+                }
+            }
+
+            var file = files[file_index];
+
+            var buffer_data = Buffer.from(file.data, 'binary');
+            var file_name = this.genUploadName(file.filename, 'upload_');
+            if (target_file == '') {
+                target_file = real_path + '/' + file_name;
+            }
+        } catch (err) {
+            callback(err, null);
+            return ;
+        }
+
+        return new Promise();
+    };
+
+    /*
         multipart/form-data
         multipart/byteranges
     */
@@ -627,8 +674,9 @@ var ant = function(){
                     这段代码考虑到需要处理error事件，但并没有进行严格的测试。
                 */
                 req.on('error', (err) => {
+                    body_data = '';
                     req.resume();
-                    console.log(err);
+                    //console.log(err);
                     return ;
                 });
             } else {
