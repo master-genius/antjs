@@ -8,6 +8,8 @@ ant.config.static_on = true;
 ant.config.upload_path = `${ant.config.static_path}/upload`;
 //ant.config.daemon = true;
 
+ant.cors_on = '*';
+
 antsess.config.expires = 3600;
 
 antupfilter.middleware.preg = ['/upload', '/upimage'];
@@ -93,5 +95,4 @@ ant.get('/content/:id', (req, res, args) => {
 });
 
 ant.run('127.0.0.1', 5678);
-//ant.run('127.0.0.1', 2019);
 

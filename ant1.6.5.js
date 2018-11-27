@@ -58,6 +58,9 @@ var ant = function(){
             cert    : ''
         },
 
+        //跨域请求
+        cors_on     : false,
+
     };
 
     /*
@@ -627,6 +630,10 @@ var ant = function(){
 
         var handler = function (req,res) {
             res.send = function(data) {
+                if (ant.cors_on !== false) {
+                    res.setHeader('Access-Control-Allow-Origin', ant.cors_on);
+                }
+
                 if (typeof data === 'object') {
                     res.end(JSON.stringify(data));
                 } else if (data instanceof Array) {
