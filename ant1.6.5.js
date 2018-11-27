@@ -552,14 +552,14 @@ var ant = function(){
         if (options.files.length == 0) {
             callback(new Error('files not found'), null);
             return ;
-        } else if (files.length <= file_index) {
-            file_index = files.length - 1;
-        } else if (file_index < 0) {
-            file_index = 0;
+        } else if (options.files.length <= options.file_index) {
+            options.file_index = options.files.length - 1;
+        } else if (options.file_index < 0) {
+            options.file_index = 0;
         }
 
         try {
-            var real_path = `${this.config.upload_path}/${upload_name}`;
+            var real_path = `${this.config.upload_path}/${options.upload_name}`;
             try {
                 fs.accessSync(real_path, fs.constants.F_OK);
             } catch (err) {
@@ -571,19 +571,34 @@ var ant = function(){
                 }
             }
 
-            var file = files[file_index];
+            var file = options.files[options.file_index];
 
             var buffer_data = Buffer.from(file.data, 'binary');
             var file_name = this.genUploadName(file.filename, 'upload_');
-            if (target_file == '') {
-                target_file = real_path + '/' + file_name;
+            if (options.target_file === undefined || options.target_file == '') {
+                options.target_file = real_path + '/' + file_name;
             }
+
         } catch (err) {
             callback(err, null);
             return ;
         }
 
-        return new Promise();
+        var ok_data = {
+            filename : file_name,
+            orgname  : file.filename,
+            path     : real_path,
+            upload_name : options.upload_name
+        };
+
+        fs.writeFile(options.target_file, buffer_data, (err) => {
+            if (err) {
+                callback(err, null);
+            } else {
+                callback(null, ok_data);
+            }
+        });
+
     };
 
     /*
@@ -783,7 +798,8 @@ var ant = function(){
         parseSingleFile   : this.parseSingleFile,
         parseUploadData   : this.parseUploadData,
         checkUploadHeader : this.checkUploadHeader,
-        moveUploadFile    : this.moveUploadFile
+        moveUploadFile    : this.moveUploadFile,
+        moveuf            : this.moveuf
     };
 
 }();

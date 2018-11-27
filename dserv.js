@@ -1,4 +1,4 @@
-const ant = require('./ant1.6.js');
+const ant = require('./ant1.6.5.js');
 const antsess = require('./ant_sess_middleware.js');
 const antupfilter = require('./ant_upload_middleware.js');
 const fs = require('fs');
@@ -7,23 +7,13 @@ ant.config.static_path = './static';
 ant.config.static_on = true;
 ant.config.upload_path = `${ant.config.static_path}/upload`;
 //ant.config.daemon = true;
-//ant.config.https_on = true;
-ant.config.https_options = {
-    key  : './rsa/rsa_private.key',
-    cert : './rsa/cert.crt'
-};
 
 antsess.config.expires = 3600;
 
-antupfilter.middleware.preg = ['/upload'];
+antupfilter.middleware.preg = ['/upload', '/upimage'];
 
 ant.usemiddle(antsess);
 ant.usemiddle(antupfilter);
-
-ant.get('/', function(req, res) {
-    //console.log('user-data', req.user);
-    res.end("success");
-});
 
 ant.post('/upload', function(req, res){
     var up_after = null;
@@ -46,6 +36,24 @@ ant.post('/upload', function(req, res){
     }
 
     res.send(up_after);
+});
+
+ant.post('/upimage', function(req, res){
+
+    ant.moveuf({
+        files : req.upload_files['image'],
+        file_index : 0,
+        upload_name : 'image'
+    }, (err, data) => {
+        if (err) {
+            console.log(err);
+            res.send('failed');
+        } else {
+            res.send(data);
+        }
+
+    });
+    
 });
 
 ant.post('/pt', function(req, res){
@@ -84,6 +92,6 @@ ant.get('/content/:id', (req, res, args) => {
     res.send(args);
 });
 
-ant.ants('127.0.0.1', 2020);
+ant.run('127.0.0.1', 5678);
 //ant.run('127.0.0.1', 2019);
 
