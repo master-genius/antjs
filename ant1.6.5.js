@@ -163,7 +163,7 @@ var ant = function(){
             var real_mid = function(req, res, next) {
                 var self_preg = preg;
                 
-                if (typeof self_preg === 'string') {
+                if (typeof self_preg === 'string' && self_preg.length > 0) {
                     if (!(self_preg == req.pathinfo)) {
                         return next.method(req, res, next.next);
                     }

@@ -100,6 +100,35 @@ var ant = function(){
         };
     };
 
+    /*
+        自动创建路由：
+            [
+                {
+                    path   : 'PATH_STRING',
+                    method : 'GET|POST|ANY',
+                    callback : callback
+                }
+            ]
+    */
+    this.autoRoute = function(path_table) {
+        var allow_method = ['GET', 'POST', 'ANY'];
+        for (var i=0; i<path_table.length; i++) {
+            if (path_table[i].path !== undefined
+                && path_table[i].method !== undefined
+                && allow_method.indexOf(path_table[i].method) > -1
+                && path_table[i].callback !== undefined
+                && typeof path_table[i].callback === 'function'
+            ) {
+                this.addPath(
+                    path_table[i].path,
+                    path_table[i].method,
+                    path_table[i].callback
+                );
+            }
+        }
+
+    };
+
     this.staticReq = function(path, req, res) {
         var pfile = this.config.static_path + '/' + path;
         new Promise(function(resolve, reject){
@@ -163,7 +192,7 @@ var ant = function(){
             var real_mid = function(req, res, next) {
                 var self_preg = preg;
                 
-                if (typeof self_preg === 'string') {
+                if (typeof self_preg === 'string' && self_preg.length > 0) {
                     if (!(self_preg == req.pathinfo)) {
                         return next.method(req, res, next.next);
                     }
@@ -537,37 +566,68 @@ var ant = function(){
         } catch (err) {
             return err;
         }
-
-        /*
-        return new Promise(function(resolve, reject) {
-            fs.writeFile(target_file, buffer_data, (err) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({
-                        status   : 0,
-                        pathname : target_file,
-                        filename : file_name
-                    });
-                }
-            });
-        });
-        */
     };
 
-    this.mvupfile = function(opts, callback) {
+    /*
+        移动上传文件的异步模式，
+        options :
+            files       : 文件列表，比如req.upload_files['image']
+            file_index  : 文件列表索引
+            upload_name : 上传名称，可以和req.upload_files相同，也可以是其他
+            target_file : 指定目标文件路径和名称
+            
+    */
+    this.moveuf = function(options, callback) {
+        if (options.files.length == 0) {
+            callback(new Error('files not found'), null);
+            return ;
+        } else if (options.files.length <= options.file_index) {
+            options.file_index = options.files.length - 1;
+        } else if (options.file_index < 0) {
+            options.file_index = 0;
+        }
 
-        return new Promise((rv, rj) => {
-            if (files.length <= 0) {
-                ;
-            } else if (files.length <= file_index) {
-                file_index = files.length - 1;
-            } else if (file_index < 0) {
-                file_index = 0;
+        try {
+            var real_path = `${this.config.upload_path}/${options.upload_name}`;
+            try {
+                fs.accessSync(real_path, fs.constants.F_OK);
+            } catch (err) {
+                try {
+                    fs.mkdirSync(real_path);
+                } catch (err) {
+                    callback(err, null);
+                    return ;
+                }
             }
-        }).then(() => {
-        
+
+            var file = options.files[options.file_index];
+
+            var buffer_data = Buffer.from(file.data, 'binary');
+            var file_name = this.genUploadName(file.filename, 'upload_');
+            if (options.target_file === undefined || options.target_file == '') {
+                options.target_file = real_path + '/' + file_name;
+            }
+
+        } catch (err) {
+            callback(err, null);
+            return ;
+        }
+
+        var ok_data = {
+            filename : file_name,
+            orgname  : file.filename,
+            path     : real_path,
+            upload_name : options.upload_name
+        };
+
+        fs.writeFile(options.target_file, buffer_data, (err) => {
+            if (err) {
+                callback(err, null);
+            } else {
+                callback(null, ok_data);
+            }
         });
+
     };
 
     /*
@@ -595,7 +655,11 @@ var ant = function(){
         }
 
         var handler = function (req,res) {
-            res.send = function(data) {
+            res.send = function(data, options = {}) {
+                if (options.cors_on !== undefined) {
+                    res.setHeader('Access-Control-Allow-Origin', options.cors_on);
+                }
+
                 if (typeof data === 'object') {
                     res.end(JSON.stringify(data));
                 } else if (data instanceof Array) {
@@ -653,6 +717,15 @@ var ant = function(){
                     }
 
                     ant.execreq(get_params.pathname, req, res);
+                });
+                /*
+                    这段代码考虑到需要处理error事件，但并没有进行严格的测试。
+                */
+                req.on('error', (err) => {
+                    body_data = '';
+                    req.resume();
+                    //console.log(err);
+                    return ;
                 });
             } else {
                 res.statusCode = 405;
@@ -741,6 +814,7 @@ var ant = function(){
         any         : this.any,
         addPath     : this.addPath,
         findPath    : this.findPath,
+        autoRoute   : this.autoRoute,
         
         run         : this.run,
         ants        : this.ants,
@@ -758,7 +832,8 @@ var ant = function(){
         parseSingleFile   : this.parseSingleFile,
         parseUploadData   : this.parseUploadData,
         checkUploadHeader : this.checkUploadHeader,
-        moveUploadFile    : this.moveUploadFile
+        moveUploadFile    : this.moveUploadFile,
+        moveuf            : this.moveuf
     };
 
 }();

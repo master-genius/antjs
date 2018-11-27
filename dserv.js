@@ -8,14 +8,18 @@ ant.config.static_on = true;
 ant.config.upload_path = `${ant.config.static_path}/upload`;
 //ant.config.daemon = true;
 
-ant.cors_on = '*';
+//设置跨域
+ant.addmiddle(function(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return next.method(req, res, next.next);
+}, '');
 
 antsess.config.expires = 3600;
+ant.usemiddle(antsess);
 
 antupfilter.middleware.preg = ['/upload', '/upimage'];
-
-ant.usemiddle(antsess);
 ant.usemiddle(antupfilter);
+
 
 ant.post('/upload', function(req, res){
     var up_after = null;
@@ -64,7 +68,7 @@ ant.post('/pt', function(req, res){
 });
 
 ant.get('/header', function(req, res){
-    res.send(req.headers);
+    res.send(res.getHeaders());
 });
 
 ant.get('/upage', function(req, res) {
