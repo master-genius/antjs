@@ -1,4 +1,4 @@
-const ant = require('./ant1.6.js');
+const ant = require('./ant1.8.0.js');
 const antsess = require('./ant_sess_middleware.js');
 const antupfilter = require('./ant_upload_middleware.js');
 const fs = require('fs');
